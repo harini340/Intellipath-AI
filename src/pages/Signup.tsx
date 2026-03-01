@@ -34,8 +34,12 @@ export default function Signup() {
 
       if (authError) throw authError;
 
-      if (data.user) {
-        // 2. Automatically create profile
+      if (!data.user) {
+        throw new Error('Signup failed. Please try again.');
+      }
+
+      // 2. Automatically create profile
+      try {
         await profileService.upsertProfile({
           id: data.user.id,
           full_name: fullName,
@@ -47,8 +51,20 @@ export default function Signup() {
             communication: 0
           }
         });
+      } catch (profileErr: any) {
+        console.error('Profile creation error:', profileErr);
+        // We don't necessarily want to block the user if auth succeeded but profile failed,
+        // but for this app, the profile is critical.
+        throw new Error('Account created, but profile setup failed. Please try logging in.');
+      }
 
+      // If we reach here, both succeeded
+      if (data.session) {
+        // User is logged in immediately (email confirmation off)
         navigate('/assessment');
+      } else {
+        // Email confirmation might be required
+        setError('Signup successful! Please check your email for a confirmation link.');
       }
     } catch (err: any) {
       setError(err.message);
