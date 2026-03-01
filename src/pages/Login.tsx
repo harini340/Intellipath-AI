@@ -25,7 +25,11 @@ export default function Login() {
       if (error) throw error;
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.message);
+      if (err.message === 'Failed to fetch') {
+        setError('Connection error. Please check your internet connection and Supabase URL.');
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
