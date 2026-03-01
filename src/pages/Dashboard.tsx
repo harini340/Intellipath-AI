@@ -31,6 +31,7 @@ import {
 } from 'recharts';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
+import { profileService } from '../services/profileService';
 
 export default function Dashboard() {
   const { user, signOut } = useAuth();
@@ -38,6 +39,24 @@ export default function Dashboard() {
   const [learningPath, setLearningPath] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [testStatus, setTestStatus] = useState<string | null>(null);
+
+  const runTestFlow = async () => {
+    if (!user) return;
+    setTestStatus('Running test...');
+    try {
+      const result = await profileService.runTestFlow(user.id, user.user_metadata?.full_name || 'Test User');
+      if (result.success) {
+        setTestStatus('Test successful! Profile updated.');
+        // Refresh data
+        window.location.reload();
+      } else {
+        setTestStatus(`Test failed: ${result.error}`);
+      }
+    } catch (err: any) {
+      setTestStatus(`Error: ${err.message}`);
+    }
+  };
 
   useEffect(() => {
     async function fetchData() {
@@ -147,6 +166,12 @@ export default function Dashboard() {
               <Trophy className="w-5 h-5 text-yellow-500" />
               <span className="font-bold">2450 XP</span>
             </div>
+            <button 
+              onClick={runTestFlow}
+              className="px-4 py-2 bg-emerald-500/10 text-emerald-500 text-sm font-bold rounded-full border border-emerald-500/20 hover:bg-emerald-500/20 transition-all"
+            >
+              {testStatus || 'Test Connection'}
+            </button>
           </div>
         </header>
 
