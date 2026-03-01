@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { isSupabaseConfigured } from './lib/supabase';
 import { AlertCircle, Settings } from 'lucide-react';
+import { useEffect } from 'react';
+import { startHealthCheck } from './services/healthCheck';
 
 // Pages (to be created)
 import Landing from './pages/Landing';
@@ -33,6 +35,13 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  useEffect(() => {
+    if (isSupabaseConfigured) {
+      const stopHealthCheck = startHealthCheck();
+      return () => stopHealthCheck();
+    }
+  }, []);
+
   if (!isSupabaseConfigured) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
