@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Brain, Code, Target, MessageSquare, ArrowRight, CheckCircle, Timer, ChevronRight } from 'lucide-react';
+import { Brain, Code, Target, MessageSquare, ArrowRight, CheckCircle, Timer, ChevronRight, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { generateLearningPath } from '../services/geminiService';
@@ -35,6 +35,7 @@ export default function Assessment() {
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes
   const [isFinished, setIsFinished] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (timeLeft > 0 && !isFinished) {
@@ -66,10 +67,12 @@ export default function Assessment() {
   const handleFinish = async () => {
     setIsFinished(true);
     setIsAnalyzing(true);
+    setError(null);
 
     try {
       // 1. Get profile
-      const { data: profile } = await supabase.from('profiles').select('*').eq('id', user?.id).single();
+      const { data: profile, error: profileError } = await supabase.from('profiles').select('*').eq('id', user?.id).single();
+      if (profileError) throw profileError;
       
       // 2. Calculate scores
       const scores = { coding: 0, aptitude: 0, communication: 0 };
@@ -85,7 +88,7 @@ export default function Assessment() {
       const path = await generateLearningPath({ answers, scores }, profile);
 
       // 4. Save to DB
-      await supabase.from('learning_paths').insert({
+      const { error: pathError } = await supabase.from('learning_paths').insert({
         user_id: user?.id,
         roadmap: path.roadmap,
         strengths: path.strengths,
@@ -93,21 +96,24 @@ export default function Assessment() {
         difficulty_level: path.difficulty_level,
         summary: path.summary
       });
+      if (pathError) throw pathError;
 
       // 5. Update profile with assessment scores
-      await supabase.from('profiles').update({
+      const { error: updateError } = await supabase.from('profiles').update({
         skill_assessment: {
           coding: (scores.coding / QUESTIONS.coding.length) * 100,
           aptitude: (scores.aptitude / QUESTIONS.aptitude.length) * 100,
           communication: (scores.communication / QUESTIONS.communication.length) * 100,
         }
       }).eq('id', user?.id);
+      if (updateError) throw updateError;
 
       navigate('/dashboard');
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-    } finally {
+      setError(err.message || 'Failed to complete assessment. Please check your connection.');
       setIsAnalyzing(false);
+      setIsFinished(false);
     }
   };
 
@@ -127,6 +133,24 @@ export default function Assessment() {
         />
         <h1 className="text-2xl font-bold mb-4">Analyzing Your Skills...</h1>
         <p className="text-zinc-400 max-w-md">Our AI is processing your answers to build a personalized learning roadmap just for you.</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-4 text-center">
+        <div className="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center mb-6">
+          <AlertCircle className="w-8 h-8 text-red-500" />
+        </div>
+        <h1 className="text-2xl font-bold mb-4">Assessment Error</h1>
+        <p className="text-zinc-400 max-w-md mb-8">{error}</p>
+        <button 
+          onClick={() => setError(null)}
+          className="px-8 py-3 bg-zinc-900 text-white font-bold rounded-xl border border-white/10 hover:bg-zinc-800 transition-all"
+        >
+          Try Again
+        </button>
       </div>
     );
   }

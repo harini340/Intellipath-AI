@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Brain, GraduationCap, Target, Sliders, Clock, Sparkles } from 'lucide-react';
+import { Brain, GraduationCap, Target, Sliders, Clock, Sparkles, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 
@@ -10,6 +10,7 @@ export default function ProfileSetup() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
+  const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     fullName: user?.user_metadata?.full_name || '',
@@ -29,6 +30,7 @@ export default function ProfileSetup() {
 
   const handleSubmit = async () => {
     setLoading(true);
+    setError(null);
     try {
       const { error } = await supabase.from('profiles').upsert({
         id: user?.id,
@@ -42,8 +44,9 @@ export default function ProfileSetup() {
 
       if (error) throw error;
       navigate('/assessment');
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setError(err.message || 'Failed to save profile. Please check your connection.');
     } finally {
       setLoading(false);
     }
@@ -74,6 +77,12 @@ export default function ProfileSetup() {
         </div>
 
         <div className="bg-zinc-900 border border-white/10 rounded-2xl p-6 md:p-8 shadow-2xl">
+          {error && (
+            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3 text-red-500 text-sm">
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <p>{error}</p>
+            </div>
+          )}
           {step === 1 && (
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
               <div className="flex items-center gap-3 mb-6">

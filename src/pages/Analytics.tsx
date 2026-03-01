@@ -14,7 +14,8 @@ import {
   ArrowDownRight,
   Trophy,
   History,
-  Radar
+  Radar,
+  AlertCircle
 } from 'lucide-react';
 import { 
   Radar as RadarChart, 
@@ -40,17 +41,21 @@ export default function Analytics() {
   const [profile, setProfile] = useState<any>(null);
   const [learningPath, setLearningPath] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const { data: profileData } = await supabase.from('profiles').select('*').eq('id', user?.id).single();
-        const { data: pathData } = await supabase.from('learning_paths').select('*').eq('user_id', user?.id).order('created_at', { ascending: false }).limit(1).single();
+        const { data: profileData, error: profileError } = await supabase.from('profiles').select('*').eq('id', user?.id).single();
+        if (profileError) throw profileError;
+
+        const { data: pathData, error: pathError } = await supabase.from('learning_paths').select('*').eq('user_id', user?.id).order('created_at', { ascending: false }).limit(1).single();
         
         setProfile(profileData);
         setLearningPath(pathData);
-      } catch (err) {
+      } catch (err: any) {
         console.error(err);
+        setError(err.message || 'Failed to fetch data. Please check your connection.');
       } finally {
         setLoading(false);
       }
@@ -62,6 +67,24 @@ export default function Analytics() {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-4 text-center">
+        <div className="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center mb-6">
+          <AlertCircle className="w-8 h-8 text-red-500" />
+        </div>
+        <h1 className="text-2xl font-bold mb-4">Connection Error</h1>
+        <p className="text-zinc-400 max-w-md mb-8">{error}</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="px-8 py-3 bg-zinc-900 text-white font-bold rounded-xl border border-white/10 hover:bg-zinc-800 transition-all"
+        >
+          Try Again
+        </button>
       </div>
     );
   }
