@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Brain, Mail, Lock, AlertCircle, Chrome, User } from 'lucide-react';
+import { Brain, Mail, Lock, AlertCircle, Chrome, User, GraduationCap, Target } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { profileService } from '../services/profileService';
 
 export default function Signup() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [educationLevel, setEducationLevel] = useState('');
+  const [careerGoal, setCareerGoal] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -18,7 +21,8 @@ export default function Signup() {
     setError(null);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
+      // 1. Create Auth User
+      const { data, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -28,9 +32,23 @@ export default function Signup() {
         },
       });
 
-      if (error) throw error;
+      if (authError) throw authError;
+
       if (data.user) {
-        navigate('/profile-setup');
+        // 2. Automatically create profile
+        await profileService.upsertProfile({
+          id: data.user.id,
+          full_name: fullName,
+          education_level: educationLevel,
+          career_goal: careerGoal,
+          skill_assessment: {
+            coding: 0,
+            aptitude: 0,
+            communication: 0
+          }
+        });
+
+        navigate('/assessment');
       }
     } catch (err: any) {
       setError(err.message);
@@ -93,6 +111,40 @@ export default function Signup() {
                   onChange={(e) => setFullName(e.target.value)}
                   className="w-full bg-zinc-950 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white placeholder:text-zinc-600 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all outline-none"
                   placeholder="John Doe"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-zinc-300 ml-1">Education Level</label>
+              <div className="relative">
+                <GraduationCap className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                <select
+                  required
+                  value={educationLevel}
+                  onChange={(e) => setEducationLevel(e.target.value)}
+                  className="w-full bg-zinc-950 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white appearance-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all outline-none"
+                >
+                  <option value="" disabled>Select Education</option>
+                  <option value="high-school">High School</option>
+                  <option value="undergraduate">Undergraduate</option>
+                  <option value="graduate">Graduate</option>
+                  <option value="professional">Professional</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-zinc-300 ml-1">Career Goal</label>
+              <div className="relative">
+                <Target className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                <input
+                  type="text"
+                  required
+                  value={careerGoal}
+                  onChange={(e) => setCareerGoal(e.target.value)}
+                  className="w-full bg-zinc-950 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white placeholder:text-zinc-600 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all outline-none"
+                  placeholder="e.g. AI Engineer"
                 />
               </div>
             </div>
