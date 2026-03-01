@@ -155,7 +155,9 @@ export default function Dashboard() {
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-12">
           <div>
             <h1 className="text-3xl font-bold">Welcome back, {profile?.full_name?.split(' ')[0]}!</h1>
-            <p className="text-zinc-500 mt-1">Here's what's happening with your learning path today.</p>
+            <p className="text-zinc-500 mt-1">
+              Tracking your path to becoming a <span className="text-emerald-500 font-medium">{profile?.career_goal || 'Professional'}</span>.
+            </p>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 px-4 py-2 bg-zinc-900 rounded-full border border-white/5">
